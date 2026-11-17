@@ -8,13 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/interno")
 public class EstadoInternoController {
-
     @GetMapping("/estado")
     public Map<String, String> estado() {
-        return Map.of(
-                "servicio", "SRI",
-                "estado", "LISTO",
-                "detalle", "Contribuyentes y vehículos: integración futura"
-        );
+        return Map.of("servicio", "SRI", "estado", "LISTO",
+                "detalle", "Adaptador SRI integrado; disponibilidad externa no garantizada");
     }
 }

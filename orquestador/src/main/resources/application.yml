@@ -21,3 +21,6 @@ consultaec:
       url: ${SERVICIO_SRI_URL:http://127.0.0.1:8081}
     ant:
       url: ${SERVICIO_ANT_URL:http://127.0.0.1:8082}
+  http:
+    tiempo-conexion-ms: ${CONSULTAEC_HTTP_CONEXION_MS:1500}
+    tiempo-lectura-ms: ${CONSULTAEC_HTTP_LECTURA_MS:3000}

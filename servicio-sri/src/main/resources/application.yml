@@ -1,11 +1,9 @@
 spring:
   application:
     name: consultaec-servicio-sri
-
 server:
   address: 127.0.0.1
   port: 8081
-
 management:
   endpoints:
     web:
@@ -14,3 +12,8 @@ management:
   endpoint:
     health:
       show-details: never
+consultaec:
+  sri:
+    url-base: ${SRI_URL_BASE:https://srienlinea.sri.gob.ec}
+    tiempo-conexion-ms: ${SRI_CONEXION_MS:1500}
+    tiempo-lectura-ms: ${SRI_LECTURA_MS:4500}

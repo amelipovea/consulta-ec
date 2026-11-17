@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
   consultarContribuyente, consultarPuntos, consultarVehiculo, ErrorConsulta,
   obtenerEstadoSistema, type EstadoSistema, type RespuestaConsulta,
@@ -7,10 +7,8 @@ import {
   camposResultado, esSimulacion, formatearFecha,
   validarCedula, validarCorreo, validarPlaca, validarRuc,
 } from './validaciones'
+import { ControlEnvio, primerCampoInvalido, type Formulario, type NombreCampo, type TipoConsulta } from './flujoConsultas'
 
-type TipoConsulta = 'contribuyente' | 'vehiculo' | 'puntos'
-type NombreCampo = 'correo' | 'ruc' | 'placa' | 'cedula'
-type Formulario = { correo: string; ruc: string; placa: string; cedula: string }
 type Aviso = { titulo: string; mensaje: string; codigo?: string; detalles?: string[] }
 
 const textoError = (error: unknown): Aviso => {
@@ -33,7 +31,7 @@ const textoError = (error: unknown): Aviso => {
   return { titulo: 'No se completó la consulta', mensaje: 'Ocurrió un error inesperado. Intenta nuevamente.' }
 }
 
-function Campo({ id, titulo, valor, alCambiar, alSalir, error, ejemplo, ayuda, maximo, modo = 'text', deshabilitado = false }: {
+export function Campo({ id, titulo, valor, alCambiar, alSalir, error, ejemplo, ayuda, maximo, modo = 'text', deshabilitado = false }: {
   id: NombreCampo
   titulo: string
   valor: string
@@ -57,7 +55,7 @@ function Campo({ id, titulo, valor, alCambiar, alSalir, error, ejemplo, ayuda, m
           name={id}
           type={modo === 'email' ? 'email' : 'text'}
           inputMode={modo === 'numeric' ? 'numeric' : modo === 'email' ? 'email' : 'text'}
-          autoComplete="off"
+          autoComplete={modo === 'email' ? 'email' : 'off'}
           placeholder={ejemplo}
           maxLength={maximo}
           value={valor}
@@ -71,7 +69,7 @@ function Campo({ id, titulo, valor, alCambiar, alSalir, error, ejemplo, ayuda, m
         {valor.trim() !== '' && <span className={`campo-icono ${error ? 'icono-error' : 'icono-ok'}`} aria-hidden="true">{error ? '!' : '✓'}</span>}
       </div>
       <p id={idAyuda} className="campo-ayuda">{ayuda}</p>
-      {error && <p id={idError} className="campo-mensaje-error">{error}</p>}
+      {error && <p id={idError} className="campo-mensaje-error" role="alert">{error}</p>}
     </div>
   )
 }
@@ -93,7 +91,7 @@ function AvisoError({ aviso }: { aviso: Aviso | null }) {
   )
 }
 
-function Resultado({ respuesta, titulo }: { respuesta: RespuestaConsulta; titulo: string }) {
+export function Resultado({ respuesta, titulo }: { respuesta: RespuestaConsulta; titulo: string }) {
   const cache = respuesta.metadatos.desdeCache
   const simulado = esSimulacion(respuesta.fuente)
   const filas = camposResultado(respuesta.datos)
@@ -191,6 +189,7 @@ export default function App() {
   const [estadoSistema, setEstadoSistema] = useState<EstadoSistema | null>(null)
   const [estadoError, setEstadoError] = useState<string | null>(null)
   const [estadoCargando, setEstadoCargando] = useState(false)
+  const controlEnvio = useRef(new ControlEnvio())
 
   const refrescarEstado = useCallback(async () => {
     setEstadoCargando(true)
@@ -231,37 +230,56 @@ export default function App() {
   }
 
   async function ejecutar(tipo: TipoConsulta, tarea: () => Promise<RespuestaConsulta>) {
-    setCargando((actual) => ({ ...actual, [tipo]: true }))
-    setAvisos((actual) => ({ ...actual, [tipo]: undefined }))
-    setResultados((actual) => ({ ...actual, [tipo]: undefined }))
-    try {
-      const respuesta = await tarea()
-      setResultados((actual) => ({ ...actual, [tipo]: respuesta }))
-    } catch (error) {
-      setAvisos((actual) => ({ ...actual, [tipo]: textoError(error) }))
-    } finally {
-      setCargando((actual) => ({ ...actual, [tipo]: false }))
+    await controlEnvio.current.ejecutar(async () => {
+      setCargando((actual) => ({ ...actual, [tipo]: true }))
+      setAvisos((actual) => ({ ...actual, [tipo]: undefined }))
+      setResultados((actual) => ({ ...actual, [tipo]: undefined }))
+      try {
+        const respuesta = await tarea()
+        setResultados((actual) => ({ ...actual, [tipo]: respuesta }))
+      } catch (error) {
+        if (error instanceof ErrorConsulta && error.codigo === 'VALIDACION_ERROR') {
+          const campo = error.detalles.find((detalle) => ['correo', 'ruc', 'placa', 'cedula'].includes(detalle.campo))?.campo as NombreCampo | undefined
+          if (campo) {
+            setTocado((actual) => ({ ...actual, [campo]: true }))
+            document.getElementById(campo)?.focus()
+          }
+        }
+        setAvisos((actual) => ({ ...actual, [tipo]: textoError(error) }))
+      } finally {
+        setCargando((actual) => ({ ...actual, [tipo]: false }))
+      }
+    })
+  }
+
+  function prepararEnvio(tipo: TipoConsulta): boolean {
+    if (controlEnvio.current.estaOcupado()) return false
+    const campo = tipo === 'contribuyente' ? 'ruc' : tipo === 'vehiculo' ? 'placa' : 'cedula'
+    const primero = primerCampoInvalido(tipo, formulario)
+    if (primero) {
+      setTocado((actual) => ({ ...actual, [primero]: true }))
+      document.getElementById(primero)?.focus()
+      return false
     }
+    setTocado((actual) => ({ ...actual, correo: true, [campo]: true }))
+    return true
   }
 
   function consultarContribuyenteFormulario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    setTocado((actual) => ({ ...actual, correo: true, ruc: true }))
-    if (validarCorreo(formulario.correo) || validarRuc(formulario.ruc)) return
+    if (!prepararEnvio('contribuyente')) return
     void ejecutar('contribuyente', () => consultarContribuyente(formulario.correo.trim(), formulario.ruc.trim()))
   }
 
   function consultarVehiculoFormulario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    setTocado((actual) => ({ ...actual, placa: true }))
-    if (!contribuyenteConfirmado || validarPlaca(formulario.placa)) return
+    if (!contribuyenteConfirmado || !prepararEnvio('vehiculo')) return
     void ejecutar('vehiculo', () => consultarVehiculo(formulario.correo.trim(), formulario.ruc.trim(), formulario.placa.trim().toUpperCase()))
   }
 
   function consultarPuntosFormulario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    setTocado((actual) => ({ ...actual, correo: true, cedula: true }))
-    if (validarCorreo(formulario.correo) || validarCedula(formulario.cedula)) return
+    if (!prepararEnvio('puntos')) return
     void ejecutar('puntos', () => consultarPuntos(formulario.correo.trim(), formulario.cedula.trim()))
   }
 
@@ -281,7 +299,7 @@ export default function App() {
             <div className="hero-contenido">
               <div className="hero-sobrelinea"><span className="hero-linea" /> INFORMACIÓN VEHICULAR Y TRIBUTARIA</div>
               <h1>Tus consultas,<br /><em>en un solo lugar.</em></h1>
-              <p>Consulta información de contribuyentes y vehículos del SRI, y verifica la disponibilidad de puntos de licencia de la ANT desde una interfaz clara y segura.</p>
+              <p>Consulta información de contribuyentes y vehículos del SRI, y explora una demostración de puntos ANT simulados con su origen claramente indicado.</p>
               <a href="#consultas" className="hero-boton">Comenzar consulta <span aria-hidden="true">↗</span></a>
             </div>
             <div className="hero-ilustracion" aria-hidden="true">
@@ -295,16 +313,19 @@ export default function App() {
 
         <div className="contenedor contenido-principal" id="consultas">
           <div className="columna-formularios">
-            <div className="titulo-seccion"><span className="micro-etiqueta">CENTRO DE CONSULTAS</span><h2>¿Qué necesitas consultar?</h2><p>Completa tus datos y avanza paso a paso. Los campos obligatorios están marcados con un asterisco.</p></div>
-            <div className="campo correo-compartido">
-              <Campo id="correo" titulo="Correo electrónico" valor={formulario.correo} alCambiar={(v) => actualizarCampo('correo', v)} alSalir={() => setTocado((t) => ({ ...t, correo: true }))} error={errorCampo('correo')} ejemplo="nombre@ejemplo.com" ayuda="Se utiliza para validar las solicitudes. No lo almacenamos en el navegador." maximo={254} modo="email" deshabilitado={ocupado} />
-            </div>
+            <div className="titulo-seccion"><span className="micro-etiqueta">CENTRO DE CONSULTAS</span><h2>¿Qué necesitas consultar?</h2><p>Primero ingresa tu correo; después elige la consulta. Los campos obligatorios están marcados con un asterisco.</p></div>
+            <section className={`correo-compartido ${errorCampo('correo') ? 'correo-con-error' : ''}`} aria-labelledby="titulo-correo">
+              <div className="correo-encabezado"><span className="correo-icono" aria-hidden="true">✉</span><div><span className="micro-etiqueta">ANTES DE CONSULTAR</span><h3 id="titulo-correo">Un correo para todas tus consultas</h3><p>Obligatorio para realizar cualquier consulta.</p></div></div>
+              <Campo id="correo" titulo="Correo electrónico" valor={formulario.correo} alCambiar={(v) => actualizarCampo('correo', v)} alSalir={() => setTocado((t) => ({ ...t, correo: true }))} error={errorCampo('correo')} ejemplo="nombre@ejemplo.com" ayuda="Se reutiliza en contribuyentes, vehículos y puntos de licencia. No se guarda en esta aplicación." maximo={254} modo="email" deshabilitado={ocupado} />
+              <p className="correo-alcance">Este correo se usa en las tres consultas de abajo.</p>
+            </section>
 
             <section className="paso-tarjeta" aria-labelledby="titulo-contribuyente">
               <EncabezadoPaso id="titulo-contribuyente" numero="01" titulo="Datos del contribuyente" descripcion="Comprueba la información del RUC en el SRI." etiqueta={contribuyenteConfirmado ? <span className="chip chip-ok">Verificado</span> : undefined} />
-              <form onSubmit={consultarContribuyenteFormulario} noValidate>
+              <form onSubmit={consultarContribuyenteFormulario} noValidate aria-busy={Boolean(cargando.contribuyente)}>
                 <Campo id="ruc" titulo="RUC de persona natural" valor={formulario.ruc} alCambiar={(v) => actualizarCampo('ruc', v)} alSalir={() => setTocado((t) => ({ ...t, ruc: true }))} error={errorCampo('ruc')} ejemplo="13 dígitos" ayuda="La existencia y tipo de contribuyente se confirman con el SRI." maximo={13} modo="numeric" deshabilitado={ocupado} />
                 <button type="submit" className="boton-principal" disabled={ocupado}>{cargando.contribuyente ? 'Consultando SRI…' : 'Consultar contribuyente'} <span aria-hidden="true">→</span></button>
+                {cargando.contribuyente && <p className="estado-consulta" role="status">Consultando contribuyente…</p>}
               </form>
               <AvisoError aviso={avisos.contribuyente ?? null} />
               {resultados.contribuyente && <Resultado respuesta={resultados.contribuyente} titulo="Contribuyente encontrado" />}
@@ -313,19 +334,21 @@ export default function App() {
             <section className={`paso-tarjeta ${!contribuyenteConfirmado ? 'paso-bloqueado' : ''}`} aria-labelledby="titulo-vehiculo">
               <EncabezadoPaso id="titulo-vehiculo" numero="02" titulo="Información del vehículo" descripcion="Consulta los datos de un vehículo mediante su placa." etiqueta={!contribuyenteConfirmado ? <span className="chip chip-espera">Paso anterior requerido</span> : undefined} />
               {!contribuyenteConfirmado && <div className="aviso aviso-pendiente"><span aria-hidden="true">○</span><p>Primero debes confirmar que el RUC pertenece a una persona natural.</p></div>}
-              <form onSubmit={consultarVehiculoFormulario} noValidate>
+              <form onSubmit={consultarVehiculoFormulario} noValidate aria-busy={Boolean(cargando.vehiculo)}>
                 <Campo id="placa" titulo="Placa del vehículo" valor={formulario.placa} alCambiar={(v) => actualizarCampo('placa', v)} alSalir={() => setTocado((t) => ({ ...t, placa: true }))} error={errorCampo('placa')} ejemplo="ABC-1234" ayuda="Formato: tres letras y tres o cuatro números." maximo={8} deshabilitado={!contribuyenteConfirmado || ocupado} />
                 <button type="submit" className="boton-principal" disabled={!contribuyenteConfirmado || ocupado}>{cargando.vehiculo ? 'Consultando placa…' : 'Consultar vehículo'} <span aria-hidden="true">→</span></button>
+                {cargando.vehiculo && <p className="estado-consulta" role="status">Consultando vehículo…</p>}
               </form>
               <AvisoError aviso={avisos.vehiculo ?? null} />
               {resultados.vehiculo && <Resultado respuesta={resultados.vehiculo} titulo="Información vehicular disponible" />}
             </section>
 
             <section className="paso-tarjeta" aria-labelledby="titulo-puntos">
-              <EncabezadoPaso id="titulo-puntos" numero="03" titulo="Puntos de licencia" descripcion="Consulta independiente mediante tu número de cédula." etiqueta={<span className="chip chip-independiente">Consulta independiente</span>} />
-              <form onSubmit={consultarPuntosFormulario} noValidate>
-                <Campo id="cedula" titulo="Número de cédula" valor={formulario.cedula} alCambiar={(v) => actualizarCampo('cedula', v)} alSalir={() => setTocado((t) => ({ ...t, cedula: true }))} error={errorCampo('cedula')} ejemplo="10 dígitos" ayuda="La ANT puede estar temporalmente indisponible." maximo={10} modo="numeric" deshabilitado={ocupado} />
+              <EncabezadoPaso id="titulo-puntos" numero="03" titulo="Puntos de licencia simulados" descripcion="Demostración independiente con una cédula sintética; los puntos no son oficiales." etiqueta={<span className="chip chip-prueba">Simulación</span>} />
+              <form onSubmit={consultarPuntosFormulario} noValidate aria-busy={Boolean(cargando.puntos)}>
+                <Campo id="cedula" titulo="Número de cédula de prueba" valor={formulario.cedula} alCambiar={(v) => actualizarCampo('cedula', v)} alSalir={() => setTocado((t) => ({ ...t, cedula: true }))} error={errorCampo('cedula')} ejemplo="9999999999" ayuda="Usa la identidad sintética 9999999999; no introduzcas una cédula real para la demostración." maximo={10} modo="numeric" deshabilitado={ocupado} />
                 <button type="submit" className="boton-principal" disabled={ocupado}>{cargando.puntos ? 'Consultando ANT…' : 'Consultar puntos'} <span aria-hidden="true">→</span></button>
+                {cargando.puntos && <p className="estado-consulta" role="status">Consultando puntos…</p>}
               </form>
               <AvisoError aviso={avisos.puntos ?? null} />
               {resultados.puntos && <Resultado respuesta={resultados.puntos} titulo="Respuesta de puntos de licencia" />}

@@ -52,7 +52,14 @@ button:disabled { cursor: not-allowed; }
 .micro-etiqueta { color: #008a88; font-size: 10px; letter-spacing: .155em; font-weight: 850; }
 .titulo-seccion h2 { margin: 9px 0; font-size: 29px; line-height: 1.15; letter-spacing: -.045em; }
 .titulo-seccion p { color: #7b8797; font-size: 13px; line-height: 1.7; margin: 0; }
-.correo-compartido { background: #fff; border: 1px solid #e2e9f2; box-shadow: 0 7px 20px #1a2e4410; border-radius: 13px; padding: 23px 26px; margin-bottom: 18px; }
+.correo-compartido { min-width: 0; background: #f1faf8; border: 1px solid #a8dcd5; border-left: 5px solid #13877e; box-shadow: 0 7px 20px #1a2e4410; border-radius: 13px; padding: 23px 26px; margin-bottom: 18px; }
+.correo-con-error { border-color: #d4777e; border-left-color: #bd3f50; }
+.correo-encabezado { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 21px; }
+.correo-encabezado > div { min-width: 0; }
+.correo-icono { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 9px; background: #d8f1ec; color: #0d6d68; font-size: 21px; }
+.correo-encabezado h3 { color: #174b4b; font-size: 18px; line-height: 1.3; margin: 5px 0 3px; }
+.correo-encabezado p { color: #345d61; font-size: 13px; font-weight: 700; line-height: 1.5; margin: 0; }
+.correo-alcance { color: #426d6e; font-size: 12px; line-height: 1.5; margin: 13px 0 0; }
 .paso-tarjeta { background: #fff; border: 1px solid #e2e9f2; box-shadow: 0 7px 20px #1a2e440b; padding: 27px 28px 29px; border-radius: 13px; margin-top: 18px; }
 .paso-encabezado { display: flex; align-items: center; gap: 16px; padding-bottom: 24px; margin-bottom: 23px; border-bottom: 1px solid #ecf0f5; }
 .paso-numero { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 10px; color: #007976; background: #e8f8f6; font-size: 13px; font-weight: 820; }
@@ -66,19 +73,20 @@ button:disabled { cursor: not-allowed; }
 .chip-espera { color: #758394; background: #f0f3f6; }
 .chip-independiente { color: #336e92; background: #e9f2ff; }
 .campo { min-width: 0; }
-.campo label { display: block; font-size: 12px; font-weight: 800; margin-bottom: 9px; }
+.campo label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 9px; }
 .campo label span { color: #18a9aa; }
 .campo-entrada { position: relative; }
 .campo input { width: 100%; border: 1px solid #d9e2eb; background: #fff; color: #15253c; border-radius: 8px; padding: 12px 38px 12px 14px; font-size: 14px; outline-offset: 2px; }
-.campo input::placeholder { color: #b4becb; }
+.campo input::placeholder { color: #718294; }
 .campo input:focus { border-color: #36b2b0; box-shadow: 0 0 0 3px #d8f6f3; outline: none; }
 .campo input:disabled { background: #f6f8fb; color: #7f8792; }
 .campo-con-error input { border-color: #cc6d70; }
-.campo-ayuda { font-size: 11px; color: #94a0ae; margin: 7px 0 0; line-height: 1.5; }
-.campo-mensaje-error { font-size: 11px; color: #b83748; margin: 5px 0 0; }
+.campo-ayuda { font-size: 12px; color: #526576; margin: 7px 0 0; line-height: 1.5; }
+.campo-mensaje-error { font-size: 12px; font-weight: 700; color: #aa243b; margin: 6px 0 0; }
 .campo-icono { position: absolute; right: 12px; top: 12px; font-weight: 900; font-size: 14px; }
 .icono-ok { color: #2da489; }.icono-error { color: #ca5360; }
-.boton-principal { display: flex; align-items: center; justify-content: center; gap: 18px; border: 0; border-radius: 8px; background: #0d6870; color: #fff; font-size: 12px; font-weight: 800; padding: 13px 20px; margin-top: 19px; min-height: 42px; }
+.boton-principal { display: flex; align-items: center; justify-content: center; gap: 18px; border: 0; border-radius: 8px; background: #0d6870; color: #fff; font-size: 13px; font-weight: 800; padding: 13px 20px; margin-top: 19px; min-height: 44px; }
+.estado-consulta { color: #315e68; font-size: 12px; font-weight: 700; margin: 9px 0 0; }
 .boton-principal:hover:not(:disabled) { background: #09565c; }
 .boton-principal:disabled { background: #a7b9be; }
 .boton-principal span { font-size: 18px; font-weight: 400; }
@@ -173,6 +181,9 @@ button:disabled { cursor: not-allowed; }
   .identificador-portal { padding: 7px 9px; }
   .paso-tarjeta { padding: 19px 17px; }
   .correo-compartido { padding: 19px 17px; }
+  .correo-encabezado { gap: 10px; }
+  .correo-encabezado h3 { font-size: 16px; }
+  .boton-principal { width: 100%; }
   .paso-encabezado { gap: 10px; }
   .resultado-datos { grid-template-columns: 1fr; }
   .hero h1 { font-size: 38px; }

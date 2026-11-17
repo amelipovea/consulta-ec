@@ -1,4 +1,5 @@
 /** Este cliente HTTP consume exclusivamente la API del orquestador (puerto 8080). */
+import { validarCorreo } from './validaciones.ts'
 export type ServicioEstado = {
   nombre: string
   estado: 'DISPONIBLE' | 'NO_DISPONIBLE' | string
@@ -124,13 +125,19 @@ export async function obtenerEstadoSistema(): Promise<EstadoSistema> {
 }
 
 export async function consultarContribuyente(correo: string, ruc: string): Promise<RespuestaConsulta> {
-  return validarRespuesta(await solicitud<RespuestaConsulta>('/api/v1/contribuyentes/consultas', { correo, ruc }), 'CONTRIBUYENTE')
+  return validarRespuesta(await solicitud<RespuestaConsulta>('/api/v1/contribuyentes/consultas', { correo: exigirCorreo(correo), ruc }), 'CONTRIBUYENTE')
 }
 
 export async function consultarVehiculo(correo: string, ruc: string, placa: string): Promise<RespuestaConsulta> {
-  return validarRespuesta(await solicitud<RespuestaConsulta>('/api/v1/vehiculos/consultas', { correo, ruc, placa }), 'VEHICULO')
+  return validarRespuesta(await solicitud<RespuestaConsulta>('/api/v1/vehiculos/consultas', { correo: exigirCorreo(correo), ruc, placa }), 'VEHICULO')
 }
 
 export async function consultarPuntos(correo: string, cedula: string): Promise<RespuestaConsulta> {
-  return validarRespuesta(await solicitud<RespuestaConsulta>('/api/v1/licencias/puntos/consultas', { correo, cedula }), 'PUNTOS_LICENCIA')
+  return validarRespuesta(await solicitud<RespuestaConsulta>('/api/v1/licencias/puntos/consultas', { correo: exigirCorreo(correo), cedula }), 'PUNTOS_LICENCIA')
+}
+
+function exigirCorreo(correo: string): string {
+  const mensaje = validarCorreo(correo)
+  if (mensaje) throw new ErrorConsulta('VALIDACION_ERROR', mensaje, 400, [{ campo: 'correo', mensaje }])
+  return correo.trim()
 }

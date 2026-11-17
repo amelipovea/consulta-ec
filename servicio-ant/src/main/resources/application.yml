@@ -1,12 +1,23 @@
 spring:
   application:
     name: consultaec-servicio-ant
-
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME:default}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:true}
+      timeout: 1s
+      connect-timeout: 1s
 server:
   address: 127.0.0.1
   port: 8082
-
 management:
+  health:
+    redis:
+      enabled: ${REDIS_ENABLED:false}
   endpoints:
     web:
       exposure:
@@ -14,3 +25,13 @@ management:
   endpoint:
     health:
       show-details: never
+consultaec:
+  ant:
+    modo: ${ANT_MODO:REAL}
+    simulacion-falla: ${ANT_SIMULACION_FALLA:false}
+    simulacion-puntos: ${ANT_SIMULACION_PUNTOS:20}
+    timeout-ms: ${ANT_TIMEOUT_MS:1200}
+  redis:
+    habilitado: ${REDIS_ENABLED:false}
+    ttl-segundos: ${REDIS_TTL_SECONDS:86400}
+    hmac-secret: ${REDIS_CACHE_HMAC_SECRET:}

@@ -93,3 +93,40 @@ test('rechaza puntos inválidos y fecha o tipo de consulta incorrectos', async (
   await assert.rejects(consultarPuntos('prueba@example.com', '9999999999'),
     (error) => error instanceof ErrorConsulta && error.codigo === 'CONTRATO_INVALIDO')
 })
+
+test('ninguna consulta envía solicitudes con correo ausente o inválido', async () => {
+  let llamadas = 0
+  globalThis.fetch = async () => { llamadas++; throw new Error('No debía llamarse') }
+  for (const correo of ['', 'sin-arroba']) {
+    for (const consulta of [
+      () => consultarContribuyente(correo, '9999999999001'),
+      () => consultarVehiculo(correo, '9999999999001', 'ABC-1234'),
+      () => consultarPuntos(correo, '9999999999'),
+    ]) {
+      await assert.rejects(consulta(), (error) => error instanceof ErrorConsulta &&
+        error.codigo === 'VALIDACION_ERROR' && error.detalles[0].campo === 'correo')
+    }
+  }
+  assert.equal(llamadas, 0)
+})
+
+test('un correo válido compartido se reutiliza en las tres rutas y permite recuperarse de un error', async () => {
+  const envios = []
+  globalThis.fetch = async (ruta, opciones) => {
+    envios.push({ ruta, datos: JSON.parse(opciones.body) })
+    const tipoConsulta = ruta.includes('vehiculos') ? 'VEHICULO' :
+      ruta.includes('licencias') ? 'PUNTOS_LICENCIA' : 'CONTRIBUYENTE'
+    return responder(200, { ...resultado, tipoConsulta,
+      datos: tipoConsulta === 'PUNTOS_LICENCIA' ? { puntos: 20 } : resultado.datos })
+  }
+  await assert.rejects(consultarContribuyente('incorrecto', '9999999999001'))
+  await consultarContribuyente('  prueba@example.com  ', '9999999999001')
+  await consultarVehiculo('prueba@example.com', '9999999999001', 'ABC-1234')
+  await consultarPuntos('prueba@example.com', '9999999999')
+  assert.equal(envios.length, 3)
+  assert.deepEqual(envios.map((envio) => envio.datos.correo), Array(3).fill('prueba@example.com'))
+  assert.deepEqual(envios.map((envio) => envio.ruta), [
+    '/api/v1/contribuyentes/consultas', '/api/v1/vehiculos/consultas',
+    '/api/v1/licencias/puntos/consultas',
+  ])
+})

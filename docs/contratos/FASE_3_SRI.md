@@ -42,6 +42,8 @@ El RUC indicado es sintético y se utiliza solamente para ilustrar la forma del 
 
 El normalizador reconoce `tipoContribuyente=PERSONA NATURAL` (o `NATURAL`) y un subconjunto de campos; no asume datos ausentes. Si el proveedor cambia su contrato o no es accesible, mostramos error.
 
+Las pruebas de integración usan un servidor HTTP local simulado para verificar rutas GET, parámetros, respuestas y errores técnicos. **No se registró una respuesta SRI en vivo** porque no se usaron identificadores personales ajenos o no autorizados. Los tiempos configurados son 1500 ms para conexión y 4500 ms para lectura; pueden ajustarse mediante `SRI_CONEXION_MS` y `SRI_LECTURA_MS`.
+
 ## Interpretación de resultados
 
 - `400 VALIDACION_ERROR` = entrada con formato incorrecto.

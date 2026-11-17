@@ -1,69 +1,38 @@
-# Servicio ANT — Fase 4
+# Servicio ANT y Redis local
 
-Microservicio independiente Java 17 / Spring Boot, puerto local `8082`.
+Microservicio Java 17 / Spring Boot en `127.0.0.1:8082`. Expone `POST /api/v1/interno/licencias/puntos/consultas`; recibe `{"cedula":"9999999999"}` en las pruebas sintéticas. Solo valida diez dígitos, no una identidad real.
 
-## Qué hace esta fase
+## Modos y recuperación
 
-- Expone `POST /api/v1/interno/licencias/puntos/consultas` con `{"cedula":"9999999999"}`.
-- Verifica formato (10 dígitos); no implica verificación de identidad real.
-- **REAL (predeterminado):** contacta el recurso JSP indicado en la actividad. Como no existe un contrato de puntos confirmado, **no extrae ni inventa puntos del HTML**. Devuelve `503` y usa último dato válido en caché si existiera.
-- **SIMULADO:** genera `{"puntos":20}` etiquetado `SIMULACION_ANT` para hacer pruebas de fallos, no para afirmar que sean puntos oficiales.
-- Guarda solo resultados válidos en Redis cuando `REDIS_ENABLED=true`; controla TTL y recupera el último registro válido ante fallos técnicos.
-- La clave de Redis usa HMAC-SHA256, no contiene la cédula legible. Real y simulación usan espacios de claves separados.
+`ANT_MODO=SIMULADO` genera `{"puntos":20}` por defecto, con `fuente=SIMULACION_ANT`. Esta simulación fue autorizada por el docente cuando el portal de citaciones de la ANT devolvió HTTP 502. La comprobación actual se registra en [resultados finales](../docs/pruebas/RESULTADOS_FINALES.md): no se atribuye al portal un 502 que no se haya observado ahora. `ANT_SIMULACION_FALLA=true` provoca un error técnico controlado.
 
-## Pruebas sin credenciales (no prueban Redis Cloud)
+El servicio valida una respuesta antes de guardarla. Si el proveedor falla, lee el último dato válido de Redis y devuelve `fuente=SIMULACION_ANT_CACHE`, `desdeCache=true`, los mismos puntos y `consultadoEn` original. Si no hay caché, devuelve 503 estructurado. Una respuesta inválida no sobreescribe el dato anterior. El TTL predeterminado es 86400 segundos; después de vencer, el dato deja de recuperarse.
 
-Desde la raíz del repositorio:
+`ANT_MODO=REAL` solicita la página JSP de citaciones indicada por el proyecto. Aunque responda, no hay un contrato verificado de puntos; por ello no extrae puntos del HTML ni presenta un número oficial.
 
-```powershell
-.\mvnw.cmd -B clean test
-```
+## Redis local en Docker
 
-## Demostrar simulación con Redis Cloud (evidencia separada)
+Usar el contenedor existente `consultaec-redis` y comprobar `docker exec consultaec-redis redis-cli ping`. El archivo [`.env.example`](.env.example) muestra los valores locales: `REDIS_ENABLED=true`, host `127.0.0.1`, puerto `6379`, usuario `default`, contraseña vacía, `REDIS_SSL_ENABLED=false`, TTL `86400`, modo `SIMULADO` y fallo `false`. Java lee variables de entorno; no carga `.env.example` automáticamente. Los tiempos de conexión y lectura de Redis son configurables y tienen un valor local de 3 segundos. TLS puede activarse para otro entorno con `REDIS_SSL_ENABLED=true`.
 
-Crear una instancia en Redis Cloud y obtener host, puerto y credenciales mediante su panel oficial. **Nunca publicar contraseñas ni capturas que las muestren**. En la terminal que iniciará `servicio-ant`, definir las variables del entorno, introduciendo los valores de su propia cuenta:
+Cuando Redis está habilitado, `REDIS_CACHE_HMAC_SECRET` es obligatorio y debe tener al menos 24 caracteres. Se guarda cifrado con DPAPI en `%APPDATA%\ConsultaEC\ant-hmac.dpapi` y se carga en la terminal ANT según los [cuatro comandos de arranque manual](../README.md#arranque-manual-cuatro-terminales). Hay que reutilizar exactamente el mismo secreto entre reinicios. Las claves Redis contienen HMAC-SHA256, no la cédula en texto claro. Los espacios de claves de simulación y modo real son distintos.
 
-```powershell
-$env:REDIS_ENABLED = 'true'
-$env:REDIS_HOST = 'HOST_ASIGNADO'
-$env:REDIS_PORT = 'PUERTO_ASIGNADO'
-$env:REDIS_USERNAME = 'default'
-$env:REDIS_PASSWORD = 'CONTRASENA_PRIVADA'
-$env:REDIS_SSL_ENABLED = 'true'
-$env:REDIS_CACHE_HMAC_SECRET = 'GENERAR_UN_SECRETO_ALEATORIO_LARGO'
-$env:REDIS_TTL_SECONDS = '86400'
-$env:ANT_MODO = 'SIMULADO'
-$env:ANT_SIMULACION_FALLA = 'false'
-.\mvnw.cmd -f servicio-ant\pom.xml spring-boot:run
-```
+## Verificación
 
-Importante: sustituir el secreto de ejemplo por una clave aleatoria de al menos 24 caracteres; mantenerlo fijo entre las dos ejecuciones, pues si cambia, cambia la clave de caché. Evitar almacenar estas variables en `.env` versionado.
-
-Con el orquestador encendido en otra terminal:
+Con las cuatro aplicaciones iniciadas:
 
 ```powershell
 .\probar-fase4.cmd -ModoSimulado
+.\scripts\probar-recuperacion-redis.ps1 -Escenario Actual
 ```
 
-Debe devolver `fuente=SIMULACION_ANT`, `desdeCache=false`, y guardar el dato. Verificar la escritura en el panel de Redis Cloud (sin revelar credenciales ni datos personales); realizar además una consulta explícita de la clave/TTL mediante las herramientas de Redis si están disponibles.
+Reinicie **solo ANT** con `ANT_SIMULACION_FALLA=true` y ejecute `-Escenario Fallo`. El script informa estados HTTP, fuente, caché, fecha, puntos y TTL real, y comprueba además un fallo sin caché. Para verificar una respuesta inválida sin perder el dato válido, reinicie ANT con `ANT_SIMULACION_FALLA=false` y `ANT_SIMULACION_PUNTOS=-1`, luego use `-Escenario Invalido`.
 
-Detener **solo** servicio-ant y reiniciarlo en la misma terminal con:
+La prueba de caducidad usa exclusivamente un registro sintético separado y TTL de 2 segundos:
 
 ```powershell
-$env:ANT_SIMULACION_FALLA = 'true'
-.\mvnw.cmd -f servicio-ant\pom.xml spring-boot:run
+$env:CONSULTAEC_REDIS_INTEGRATION = 'true'
+.\mvnw.cmd -B -pl servicio-ant test
+Remove-Item Env:CONSULTAEC_REDIS_INTEGRATION
 ```
 
-En otra terminal:
-
-```powershell
-.\probar-fase4.cmd -ModoSimulado -EsperarCache
-```
-
-Debe devolver `fuente=SIMULACION_ANT_CACHE`, `desdeCache=true`, y conservar `consultadoEn` original. Si no recupera, revisar conexión TLS/puerto/credenciales, el TTL y el secreto HMAC (misma clave en ambas ejecuciones).
-
-## Limitaciones que hay que declarar
-
-La dirección del enunciado ANT corresponde a una página JSP de citaciones. No se ha comprobado ningún contrato oficial para obtener puntos. Por tanto, **la integración de puntos ANT reales permanece pendiente de verificar**; la simulación y el fallback demuestran la resiliencia, no una consulta oficial. No se debe activar `SIMULADO` y presentarlo como dato real.
-
-El TTL de 86400 segundos (24h) es una elección experimental que deberá justificarse; después de expirar, no se devuelve el registro. Redis no es un historial permanente de puntos.
+Los resultados reales de ejecución se anotan en [RESULTADOS_FINALES.md](../docs/pruebas/RESULTADOS_FINALES.md). No publicar el secreto, respuestas de personas reales ni capturas con identificadores personales.

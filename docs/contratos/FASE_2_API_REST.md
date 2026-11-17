@@ -1,5 +1,7 @@
 # ConsultaEC – Contrato HTTP v1 (fase 2)
 
+> Nota de vigencia: este documento conserva el contexto histórico de la fase 2. Las tres rutas internas ya están implementadas en las fases 3 y 4. La caché vigente es Redis local en Docker y la interfaz de formularios está implementada. Para el estado actual consulte el README raíz y los resultados finales.
+
 ## Alcance y arquitectura
 
 React → Orquestador (`:8080`) → Servicio SRI (`:8081`) / Servicio ANT (`:8082`).
@@ -92,8 +94,7 @@ El orquestador añadirá `tipoConsulta` y devolverá al frontend:
 ```
 
 `tipoConsulta`: `CONTRIBUYENTE`, `VEHICULO` o `PUNTOS_LICENCIA`.
-`fuente`: el microservicio declara la procedencia real: `SRI`, `ANT`, `REDIS_CLOUD` o
-`SIMULADO` (este último **no representa datos oficiales**). El orquestador no inventa ni
+`fuente`: el microservicio declara la procedencia: `SRI`, `SIMULACION_ANT` o `SIMULACION_ANT_CACHE` en la configuración actual. La simulación **no representa datos oficiales**. El orquestador no inventa ni
 reemplaza la fuente. En un resultado de Redis, `desdeCache=true` y la fecha identifica
 cuándo se obtuvo el dato original. El proveedor debe entregar una fecha ISO-8601 UTC válida.
 
@@ -134,7 +135,7 @@ Nunca registrar RUC, cédula o correo en mensajes públicos de error.
 
 - Integración real SRI y validación de persona natural.
 - Consulta automática ANT y su interpretación.
-- Redis Cloud, TTL y recuperación de último dato válido.
+- Redis local, TTL y recuperación de último dato válido (implementados en fase 4).
 - Formulario de negocio React (sigue con el panel de fase 1).
 
 ## Compatibilidad y privacidad

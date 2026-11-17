@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,11 +29,16 @@ class ServicioSriIntegracionSimuladaTests {
     private boolean existe;
     private String respuestaVehicular;
     private final AtomicInteger llamadasVehiculos = new AtomicInteger();
+    private final AtomicReference<String> ultimaRuta = new AtomicReference<>();
+    private final AtomicReference<String> ultimaConsulta = new AtomicReference<>();
+    private final AtomicReference<String> ultimoMetodo = new AtomicReference<>();
+    private int estadoExistencia;
 
     @BeforeEach
     void preparar() throws IOException {
         tipoContribuyente = "PERSONA NATURAL";
         existe = true;
+        estadoExistencia = 200;
         respuestaVehicular = """
                 {"data":[{"numeroPlaca":"ABC-1234", "marca":"MARCA SINTETICA"}]}
                 """;
@@ -88,8 +94,34 @@ class ServicioSriIntegracionSimuladaTests {
         assertEquals("VEHICULO_NO_ENCONTRADO", error.getCodigo());
     }
 
+    @Test
+    void usaLasTresRutasYParametrosHttpDeclarados() {
+        contribuyentes.consultarPersonaNatural(RUC);
+        assertEquals("/sri-catastro-sujeto-servicio-internet/rest/ConsolidadoContribuyente/obtenerPorNumerosRuc", ultimaRuta.get());
+        assertEquals("ruc=" + RUC, ultimaConsulta.get());
+        vehiculos.consultar(RUC, "ABC-1234");
+        assertEquals("GET", ultimoMetodo.get());
+        assertEquals("/sri-matriculacion-vehicular-recaudacion-servicio-internet/rest/BaseVehiculo/obtenerPorNumeroPlacaOPorNumeroCampvOPorNumeroCpn", ultimaRuta.get());
+        assertEquals("numeroPlacaCampvCpn=ABC-1234", ultimaConsulta.get());
+    }
+
+    @Test
+    void errorHttpDelProveedorNoSeInterpretaComoRucInexistente() {
+        estadoExistencia = 503;
+        var error = assertThrows(ExcepcionSri.class, () -> contribuyentes.consultarPersonaNatural(RUC));
+        assertEquals("SRI_NO_DISPONIBLE", error.getCodigo());
+    }
+
     private void responder(HttpExchange intercambio) throws IOException {
         String path = intercambio.getRequestURI().getPath();
+        ultimaRuta.set(path);
+        ultimaConsulta.set(intercambio.getRequestURI().getRawQuery());
+        ultimoMetodo.set(intercambio.getRequestMethod());
+        if (path.endsWith("existePorNumeroRuc") && estadoExistencia != 200) {
+            intercambio.sendResponseHeaders(estadoExistencia, -1);
+            intercambio.close();
+            return;
+        }
         String cuerpo;
         if (path.endsWith("existePorNumeroRuc")) cuerpo = Boolean.toString(existe);
         else if (path.endsWith("obtenerPorNumerosRuc")) {

@@ -90,6 +90,15 @@ class ClienteServiciosInternosTests {
         assertEquals(502, error.getEstadoHttp().value());
     }
 
+    @Test
+    void falloAntSinCacheConservaElContratoPublico503() {
+        estado = 503;
+        respuesta = "{\"error\":{\"codigo\":\"ANT_NO_DISPONIBLE\"}}";
+        var error = assertThrows(DependenciaException.class, () -> cliente.consultarPuntos("9999999998"));
+        assertEquals(503, error.getEstadoHttp().value());
+        assertEquals("DEPENDENCIA_NO_DISPONIBLE", error.getCodigo());
+    }
+
     private void responder(HttpExchange intercambio) throws IOException {
         byte[] bytes = respuesta.getBytes(StandardCharsets.UTF_8);
         intercambio.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");

@@ -59,13 +59,8 @@ Comprobar-Post "Placa invalida" "/api/v1/vehiculos/consultas" `
     '{"correo":"prueba@ejemplo.com","ruc":"1712345678001","placa":"??"}' @(400) "VALIDACION_ERROR"
 Comprobar-Post "Cedula invalida" "/api/v1/licencias/puntos/consultas" `
     '{"correo":"prueba@ejemplo.com","cedula":"123"}' @(400) "VALIDACION_ERROR"
-Comprobar-Post "Consulta valida SRI sin fase 3" "/api/v1/contribuyentes/consultas" `
-    '{"correo":"prueba@ejemplo.com","ruc":"1712345678001"}' @(501) "CONTRATO_INTERNO_PENDIENTE"
-Comprobar-Post "Consulta valida ANT sin fase 4" "/api/v1/licencias/puntos/consultas" `
-    '{"correo":"prueba@ejemplo.com","cedula":"1712345678"}' @(501) "CONTRATO_INTERNO_PENDIENTE"
-
 if ($fallos -eq 0) {
-    Write-Host "FASE 2 APROBADA - API preparada, integraciones externas pendientes" -ForegroundColor Green
+    Write-Host "FASE 2 APROBADA - contratos de validación HTTP vigentes" -ForegroundColor Green
     exit 0
 }
 Write-Host "FASE 2 CON $fallos ERROR(ES)" -ForegroundColor Red

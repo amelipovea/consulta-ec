@@ -14,7 +14,7 @@ public class EstadoInternoController {
         return Map.of(
                 "servicio", "ANT",
                 "estado", "LISTO",
-                "detalle", "Consulta de puntos y caché Redis Cloud: integración futura"
+                "detalle", "Servicio de puntos ANT; la simulación y Redis local se configuran por entorno"
         );
     }
 }

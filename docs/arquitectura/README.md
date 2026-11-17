@@ -10,4 +10,4 @@ Las aplicaciones son procesos separados, con sus propios `pom.xml`, puertos y co
 
 El endpoint de diagnóstico comprueba conectividad entre procesos locales. No confirma la disponibilidad externa ni la validez oficial de una consulta. Los diagramas IcePanel pueden estar desactualizados; consulte [ACTUALIZACION_ICEPANEL.md](ACTUALIZACION_ICEPANEL.md).
 
-IcePanel: https://s.icepanel.io/n43YWpkfdsi2st/hsOQ
+**Enlace al modelo IcePanel de ConsultaEC:** [PENDIENTE: agregar enlace de IcePanel de la autora]

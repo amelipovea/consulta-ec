@@ -1,17 +1,19 @@
-# Evidencias de entrega pendientes
+# Capturas pendientes para el README
 
-Recolectar capturas **reales**, con fecha y contexto visible, sin secretos ni identificadores personales reales. Usar los datos sintéticos de prueba. No crear imágenes que aparenten una respuesta institucional oficial.
+Los estudiantes capturarán imágenes **reales** y las guardarán en esta carpeta con los nombres exactos de la tabla. Todavía no existen estos once archivos; las referencias Markdown del README se mostrarán cuando se añadan y confirmen en Git. No usar imágenes de muestra ni presentar una simulación como respuesta oficial.
 
-1. Cuatro aplicaciones en sus terminales, puertos 5173, 8080, 8081 y 8082, sin variables secretas visibles.
-2. `docker exec consultaec-redis redis-cli ping` con `PONG`, y prueba de lectura/TTL de una clave sintética sin mostrar el secreto HMAC.
-3. Interfaz con las tres consultas y el estado de procesos locales.
-4. Validación visible de correo, RUC, placa o cédula con formato erróneo.
-5. Resultado ANT nuevo: `SIMULACION_ANT`, `desdeCache=false`, fecha y etiqueta de dato simulado.
-6. Resultado ANT recuperado: `SIMULACION_ANT_CACHE`, `desdeCache=true`, mismos puntos y fecha original, con aviso de información anterior.
-7. Fallo ANT sin caché: HTTP 503 y JSON de error, sin puntos falsos.
-8. Salidas de Maven, pruebas de React y compilación del frontend, junto al resultado del test aislado de TTL.
-9. Comprobación actual del portal ANT: comando, fecha, URL sintética y estado HTTP realmente recibido. Una captura histórica del 502 solo si existe evidencia auténtica previa; no recrearla.
-10. Diagrama IcePanel actualizado por quien tenga acceso, si se realiza; contrastar con [las instrucciones](../arquitectura/ACTUALIZACION_ICEPANEL.md).
-11. Fichas anónimas y resumen del [estudio de usabilidad](../pruebas/USABILIDAD.md) después de sesiones reales.
+| Archivo exacto | Qué debe mostrar | Procesos necesarios y acción | Naturaleza del resultado | Datos que deben ocultarse |
+|---|---|---|---|---|
+| `01-inicio-desktop.png` | Encabezado, presentación y comienzo de consultas en escritorio. | React y orquestador; abrir `http://127.0.0.1:5173`. SRI y ANT si se muestran estados disponibles. | Interfaz local, sin consulta institucional. | Pestañas, cuentas o notificaciones personales. |
+| `02-correo-obligatorio.png` | Sección destacada «Un correo para todas tus consultas», etiqueta con asterisco y texto de obligatoriedad. | React; abrir la sección de consultas antes de enviar. | Interfaz local, sin respuesta de proveedor. | Autocompletado o correo personal. |
+| `03-validacion-correo.png` | Correo vacío o inválido, mensaje en línea y campo enfocado tras pulsar una consulta. | React y orquestador; usar solo datos sintéticos en los demás campos. | Error de validación local; no implica respuesta SRI/ANT. | Cualquier correo real o dato autocompletado. |
+| `04-consulta-contribuyente.png` | Formulario y resultado o error controlado de contribuyente con fuente visible. | Cuatro aplicaciones para la demostración completa; SRI debe estar activo. Consultar únicamente un RUC propio/autorizado si se desea una respuesta en vivo. | Integración SRI real solo si se verifica con datos autorizados; no usar un mock como evidencia oficial. | RUC, nombre, correo y otros datos personales. |
+| `05-consulta-vehiculo.png` | Paso vehicular habilitado después de confirmar persona natural y respuesta o error por placa. | React, orquestador y SRI; validar primero un RUC propio/autorizado y luego consultar su placa autorizada. | Integración SRI real solo si se verificó; declarar errores o disponibilidad tal como ocurran. | RUC, placa, correo, nombres y características identificables. |
+| `06-ant-simulacion.png` | Puntos, etiqueta «Dato simulado», `SIMULACION_ANT`, `desdeCache=false` y fecha. | React, orquestador, ANT en modo simulado y Redis local; consultar `9999999999`. | **Simulado**, nunca puntos oficiales. | Correo personal; usar `prueba@example.com`. |
+| `07-ant-recuperacion-cache.png` | «Información anterior», «Desde caché», `SIMULACION_ANT_CACHE`, puntos y fecha original. | Los cuatro procesos y Redis; guardar primero un dato sintético, reiniciar solo ANT con `ANT_SIMULACION_FALLA=true` y repetir la consulta. | **Simulado y recuperado de caché**. | Correo personal, secreto HMAC y claves completas de Redis. |
+| `08-redis-pruebas.png` | `PONG` y salida del script de recuperación con TTL positivo, sin mostrar secretos. | Redis local, ANT y orquestador; ejecutar `docker exec consultaec-redis redis-cli ping` y `scripts/probar-recuperacion-redis.ps1 -Escenario Actual`. | Evidencia técnica real sobre dato sintético. | Secreto DPAPI/HMAC, claves y otras entradas Redis. |
+| `09-pruebas-automatizadas.png` | Resumen de Maven, pruebas frontend y compilación con sus estados reales. | No requieren aplicaciones abiertas; Redis local solo para la prueba aislada de TTL. Ejecutar los comandos del README. | Pruebas reales; SRI usa un servidor HTTP simulado. | Nombres de usuario, rutas privadas, tokens o variables de entorno. |
+| `10-interfaz-movil.png` | Sección del correo y formularios legibles en una pantalla estrecha, sin controles recortados. | React; abrir en móvil o emulación de navegador y desplazarse por las tres consultas. | Interfaz local; no necesita respuesta institucional. | Autocompletado y notificaciones personales. |
+| `11-arquitectura-c4.png` | Vistas C1, C2 y C3 pertinentes del modelo IcePanel de la autora con Redis local. | No requiere aplicaciones abiertas; actualizar el modelo propio según [la guía](../arquitectura/ACTUALIZACION_ICEPANEL.md) y capturarlo. | Diagrama de arquitectura propio, no evidencia de consulta real. | Nombres de cuentas, enlaces privados o credenciales. |
 
-Antes de entregar, revisar cada imagen para ocultar rutas privadas, nombres de cuentas, claves, correos reales, RUC, cédulas y placas reales. Anotar en [RESULTADOS_FINALES.md](../pruebas/RESULTADOS_FINALES.md) qué evidencia se obtuvo y cuál sigue pendiente.
+Antes de subir cada imagen, revisar que no aparezcan personas, correos, RUC, cédulas, placas o secretos reales. La [evaluación de usabilidad](../pruebas/USABILIDAD.md) conserva el comentario cualitativo recibido; el retest posterior y sus métricas siguen pendientes. No inventar duraciones, capturas históricas del HTTP 502 ni resultados oficiales del SRI o la ANT.

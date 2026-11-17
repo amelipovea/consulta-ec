@@ -1,6 +1,6 @@
 # Actualización pendiente del modelo IcePanel
 
-El [visor C4 de ConsultaEC](https://s.icepanel.io/n43YWpkfdsi2st/hsOQ/landscape/diagrams/viewer?diagram=vufBdibo13&model=cqKWptnNe3&overlay_tab=tags&x1=0&y1=0&x2=1699&y2=935) puede mostrar Redis Cloud. **No se modificó el diagrama en línea**; esta es la lista de cambios para quien tenga permiso de edición.
+El enlace al modelo IcePanel propio de la autora está pendiente. **No se modificó el diagrama en línea**; esta es la lista de cambios para quien tenga permiso de edición. Si el modelo conserva referencias a Redis Cloud, deben reemplazarse por Redis local en Docker.
 
 ## C1: contexto
 

@@ -29,6 +29,8 @@ El archivo `vite.config.ts` ya redirige `/api` a `http://127.0.0.1:8080`; el arc
 
 Las consultas se envían solamente al pulsar el botón del formulario; no se envían automáticamente al escribir. La consulta vehicular requiere haber confirmado antes un contribuyente persona natural. La consulta ANT puede realizarse sin consultar el RUC, pero siempre requiere un correo válido.
 
+El correo obligatorio se presenta en una sección compartida antes de los tres formularios. Si falta o es inválido, la interfaz muestra un error en línea, enfoca el campo y no envía la solicitud. El cliente HTTP vuelve a validar el correo como defensa adicional. El campo usa semántica HTML de correo y autocompletado del navegador; la aplicación no lo guarda en almacenamiento persistente. Los formularios anuncian la carga e impiden solicitudes simultáneas repetidas.
+
 ## Comportamientos previstos
 
 - Validaciones inmediatas de formato (la verificación de existencia corresponde al SRI).

@@ -1,61 +1,134 @@
 # ConsultaEC
 
-ConsultaEC es un proyecto académico para consultar datos de contribuyentes y vehículos mediante el SRI y demostrar la recuperación de puntos de licencia ante fallos de la ANT. La consulta de puntos usa un **proveedor simulado autorizado por el docente** tras la indisponibilidad del portal de citaciones. Sus puntos son sintéticos, no oficiales.
+**ConsultaEC** reúne en una interfaz académica tres consultas: contribuyentes, vehículos y puntos de licencia. La aplicación coordina servicios Java independientes y muestra la procedencia, fecha y estado de cada respuesta para evitar interpretaciones engañosas.
 
-## Arquitectura C4 y componentes
+Las consultas de existencia de RUC, datos del contribuyente y vehículo por placa están implementadas como integraciones HTTP con el **SRI**; sus pruebas automatizadas usan un servidor local simulado y todavía no acreditan una respuesta oficial en vivo. Los **puntos ANT son sintéticos**: el docente autorizó la simulación después de un fallo HTTP 502 del portal de citaciones. En una comprobación posterior, el mismo portal respondió HTTP 401. Ninguno de los puntos mostrados constituye un registro oficial.
 
-| Aplicación | Directorio | Puerto | Responsabilidad |
-|---|---|---:|---|
-| Interfaz React, TypeScript y Vite | `frontend/` | 5173 | Formularios, validación de formato, resultados y avisos |
-| Orquestador Spring Boot, Java 17 | `orquestador/` | 8080 | API pública y coordinación |
-| Servicio SRI Spring Boot, Java 17 | `servicio-sri/` | 8081 | Integraciones HTTP con el SRI |
-| Servicio ANT Spring Boot, Java 17 | `servicio-ant/` | 8082 | Proveedor ANT y último dato válido |
+**Tecnologías:** React 19, TypeScript y Vite; Java 17 y Spring Boot; Redis local en Docker; Maven Wrapper y pruebas de Node.js/JUnit.
 
-```text
-Ciudadano → React :5173 → Orquestador :8080 ─┬→ Servicio SRI :8081 → SRI externo
-                                               └→ Servicio ANT :8082 → Redis local en Docker :6379
-                                                                      ↘ portal ANT, solo en modo REAL
+## Vista previa
+
+Las capturas de esta página están **pendientes de ser tomadas por los estudiantes**. Los enlaces de imagen se mostrarán en GitHub cuando se añadan archivos auténticos con estos nombres; no se incluyen imágenes ficticias.
+
+![Página principal de ConsultaEC en escritorio](docs/evidencias/01-inicio-desktop.png)
+*Vista inicial en escritorio. Captura pendiente.*
+
+![ConsultaEC en una pantalla móvil](docs/evidencias/10-interfaz-movil.png)
+*Correo obligatorio y formularios en móvil. Captura pendiente.*
+
+## Funciones principales
+
+- Un correo obligatorio y compartido para las tres consultas, con validación en línea y foco en el campo que debe corregirse.
+- Consulta de contribuyente y, tras confirmar una persona natural, consulta de vehículo por placa.
+- Consulta independiente de puntos ANT simulados, con recuperación del último dato válido si falla el proveedor.
+- Resultados con fuente y fecha; avisos visibles para simulaciones, caché y errores técnicos.
+- Interfaz adaptable, navegación por teclado y estados de carga que impiden envíos duplicados.
+
+## Arquitectura del sistema
+
+```mermaid
+flowchart LR
+    U[Persona usuaria] --> F["React + Vite<br/>:5173"]
+    F -->|"/api/v1 por HTTP"| O["Orquestador Spring Boot<br/>:8080"]
+    O -->|"REST interno"| S["Servicio SRI<br/>:8081"]
+    O -->|"REST interno"| A["Servicio ANT<br/>:8082"]
+    S -->|"HTTPS: tres GET"| SE["Portal SRI"]
+    A -->|"lectura y escritura"| R[("Redis local en Docker<br/>127.0.0.1:6379")]
+    A -. "solo modo REAL; sin contrato de puntos" .-> AE["Portal ANT de citaciones"]
 ```
 
-React consume únicamente la API del orquestador. Redis pertenece al servicio ANT. El `pom.xml` raíz compila los tres backends, que se ejecutan por separado. Véase [arquitectura](docs/arquitectura/README.md) y el [visor C4 de IcePanel](https://s.icepanel.io/n43YWpkfdsi2st/hsOQ/landscape/diagrams/viewer?diagram=vufBdibo13&model=cqKWptnNe3&overlay_tab=tags&x1=0&y1=0&x2=1699&y2=935). El visor puede conservar referencias antiguas a Redis Cloud; [esta actualización pendiente](docs/arquitectura/ACTUALIZACION_ICEPANEL.md) indica los cambios exactos.
-
-## Integraciones y contratos
-
-El servicio SRI realiza tres GET configurados contra `https://srienlinea.sri.gob.ec`: existencia de RUC, detalles del contribuyente y vehículo por placa. La consulta vehicular exige antes confirmar que el RUC corresponde a persona natural. Las pruebas automatizadas usan un servidor HTTP local y datos sintéticos; no verifican respuestas del SRI en vivo.
-
-| Operación pública en `:8080` | JSON de solicitud |
+| Componente | Responsabilidad |
 |---|---|
-| `POST /api/v1/contribuyentes/consultas` | `{"correo":"prueba@example.com","ruc":"9999999999001"}` |
-| `POST /api/v1/vehiculos/consultas` | `{"correo":"prueba@example.com","ruc":"9999999999001","placa":"ABC-1234"}` |
-| `POST /api/v1/licencias/puntos/consultas` | `{"correo":"prueba@example.com","cedula":"9999999999"}` |
+| `frontend/` | Formularios, validación de formato, accesibilidad y presentación. Solo llama al orquestador. |
+| `orquestador/` | API pública, validación y coordinación con los dos servicios internos. |
+| `servicio-sri/` | Solicitudes SRI de existencia de RUC, detalles y vehículo por placa; normaliza las respuestas. |
+| `servicio-ant/` | Proveedor simulado o adaptador del portal, validación de puntos y caché Redis. |
 
-Los ejemplos son sintéticos. La respuesta correcta contiene `tipoConsulta`, `estado=OK`, `fuente`, `datos` y `metadatos` con `consultadoEn` y `desdeCache`. Los errores contienen `error.codigo`, `mensaje`, `solicitudId`, `instante` y `detalles`. Los códigos y reglas están en [contratos HTTP](docs/contratos/FASE_2_API_REST.md), [SRI](docs/contratos/FASE_3_SRI.md) y [ANT](docs/contratos/FASE_4_ANT.md).
+Las cuatro aplicaciones se inician por separado. El `pom.xml` raíz solo facilita las pruebas y la compilación de los tres proyectos Java. Redis pertenece exclusivamente al servicio ANT. Hay más detalle en [arquitectura](docs/arquitectura/README.md).
 
-En `ANT_MODO=SIMULADO`, una respuesta nueva tiene `fuente=SIMULACION_ANT`. Si el proveedor falla y existe un último dato válido, el servicio devuelve `SIMULACION_ANT_CACHE`, `desdeCache=true` y la **fecha original**. React avisa que puede estar desactualizado. Sin caché responde con error HTTP estructurado; nunca inventa cero puntos. Redis local guarda la respuesta con TTL de 86400 segundos (24 horas), clave HMAC y sin cédula legible. El modo `REAL` no infiere puntos de la página JSP de citaciones sin contrato confirmado.
+## Arquitectura C4 en IcePanel
 
-## Requisitos y preparación
+La vista **C1** sitúa a la persona usuaria, ConsultaEC, el SRI y el portal ANT. La **C2** muestra React, orquestador, ambos microservicios y Redis local con sus conexiones. La **C3** de ANT distingue controlador, caso de uso, proveedor simulado o portal y adaptador Redis. La guía de [actualización del modelo](docs/arquitectura/ACTUALIZACION_ICEPANEL.md) describe las correcciones pendientes para representar Redis local y la simulación.
 
-Windows con PowerShell, Java 17, Node.js/npm, Docker Desktop y el contenedor local `consultaec-redis`. Maven Wrapper y npm pueden necesitar red al instalar dependencias por primera vez. El secreto HMAC estable debe existir, cifrado con DPAPI para el mismo usuario de Windows, en `%APPDATA%\ConsultaEC\ant-hmac.dpapi`. Debe tener al menos 24 caracteres. No se versiona ni se muestra.
+**Enlace al modelo IcePanel de ConsultaEC:** [PENDIENTE: agregar enlace de IcePanel de la autora]
 
-Desde la raíz del repositorio, compruebe Redis:
+La captura de la arquitectura propia se guardará en `docs/evidencias/11-arquitectura-c4.png`. El modelo en línea todavía debe revisarse por quien tenga acceso de edición.
+
+![Arquitectura C4 propia de ConsultaEC en IcePanel](docs/evidencias/11-arquitectura-c4.png)
+*Vistas C1, C2 y C3 actualizadas. Captura pendiente.*
+
+## Consultas y contratos HTTP
+
+El navegador envía `POST` con JSON únicamente a `127.0.0.1:8080`:
+
+| Consulta | Ruta pública | Campos |
+|---|---|---|
+| Contribuyente | `/api/v1/contribuyentes/consultas` | `correo`, `ruc` de 13 dígitos |
+| Vehículo | `/api/v1/vehiculos/consultas` | `correo`, `ruc`, `placa`; requiere confirmar persona natural |
+| Puntos de licencia | `/api/v1/licencias/puntos/consultas` | `correo`, `cedula` de 10 dígitos |
+
+Una respuesta correcta contiene `tipoConsulta`, `estado=OK`, `fuente`, `datos` y `metadatos.consultadoEn` / `metadatos.desdeCache`. Los errores usan `error.codigo`, `mensaje`, `solicitudId`, `instante` y `detalles`. La validación de formato puede responder HTTP 400; ausencia de datos, 404; contribuyente que no es persona natural, 422; errores de contrato o proveedor, 502; y dependencia indisponible, 503. Consulte los [contratos públicos](docs/contratos/FASE_2_API_REST.md), [SRI](docs/contratos/FASE_3_SRI.md) y [ANT](docs/contratos/FASE_4_ANT.md).
+
+El servicio SRI llama por GET al catastro para comprobar existencia del RUC y recuperar sus detalles; solo después de confirmar persona natural consulta el servicio de matriculación por placa. El correo no se transmite a los servicios internos. La interfaz no guarda identificadores en `localStorage`, `sessionStorage` ni parámetros de URL.
+
+![Consulta de contribuyente en ConsultaEC](docs/evidencias/04-consulta-contribuyente.png)
+*Resultado o error real, con datos personales ocultos. Captura pendiente.*
+
+![Consulta de vehículo en ConsultaEC](docs/evidencias/05-consulta-vehiculo.png)
+*Paso vehicular después de confirmar persona natural. Captura pendiente.*
+
+## ANT simulado y recuperación ante fallos
+
+En `ANT_MODO=SIMULADO`, una consulta nueva devuelve puntos sintéticos con `fuente=SIMULACION_ANT`, `desdeCache=false` y la fecha de origen. Solo se guarda un dato válido. Redis local conserva el último dato durante **86400 segundos** de forma predeterminada, bajo una clave HMAC que no contiene la cédula legible.
+
+Si el proveedor falla y existe caché vigente, ANT devuelve `SIMULACION_ANT_CACHE`, `desdeCache=true`, los puntos anteriores y **`consultadoEn` original**. La interfaz advierte que la información puede estar desactualizada. Tras vencer el TTL, la caché deja de responder. Si no hay dato previo, la API entrega un error 503 estructurado, sin presentar cero puntos ficticios. El modo `REAL` consulta una página JSP de citaciones, pero no deduce puntos de ella porque no hay un contrato de puntos verificado.
+
+![Puntos ANT sintéticos con fuente visible](docs/evidencias/06-ant-simulacion.png)
+*Simulación autorizada; no son puntos oficiales. Captura pendiente.*
+
+![Recuperación de puntos ANT desde caché](docs/evidencias/07-ant-recuperacion-cache.png)
+*Advertencia y fecha original del dato sintético. Captura pendiente.*
+
+## Evaluación de usabilidad y mejoras de experiencia de usuario
+
+**Objetivo:** comprobar si las personas pueden realizar las consultas, reconocer los datos obligatorios e interpretar los resultados. Una persona que probó la interfaz comunicó: «Le cambiaría que sea más obvio que el mail es necesario para realizar cualquier consulta.» Añadió: «Porque me pasó a mí al probarlo.» Es un hallazgo cualitativo de **prevención de errores**; no se registraron duraciones ni tasas de finalización.
+
+| Hallazgo | Propuesta de mejora | Cambio implementado | Evidencia |
+|---|---|---|---|
+| El correo obligatorio no destacaba antes de las tres consultas. | Presentar un campo compartido con una instrucción visible. | Sección «Un correo para todas tus consultas», frase «Obligatorio para realizar cualquier consulta.» y ayuda que nombra las tres operaciones. | Diferencia con `ada34d3` y prueba de renderizado. |
+| Una persona podía intentar enviar sin advertir el correo. | Mostrar un error próximo al campo y guiar a la corrección. | Validación prioritaria, foco en correo, mensaje en línea asociado con ARIA y rechazo previo a cualquier petición HTTP inválida. | Pruebas de flujo, API y accesibilidad del renderizado. |
+
+La revisión técnica añadió un bloqueo inmediato de envíos repetidos, estados de carga anunciados, ayudas y errores más legibles y botones móviles de ancho completo. Se conservaron los avisos de simulación y caché con la fecha original. La compilación y 22 pruebas del frontend verifican estos comportamientos; se revisó el renderizado local en escritorio y en un ancho CSS cercano al móvil. **Todavía falta repetir la evaluación con personas** para medir si la mejora reduce errores. El método, la comparación antes/después y el protocolo de retest están en [USABILIDAD.md](docs/pruebas/USABILIDAD.md).
+
+![Sección del correo obligatorio antes de las consultas](docs/evidencias/02-correo-obligatorio.png)
+*Requisito visible antes del envío. Captura pendiente.*
+
+![Validación en línea de un correo incorrecto](docs/evidencias/03-validacion-correo.png)
+*Mensaje accesible y foco en el campo. Captura pendiente.*
+
+## Instalación y arranque manual
+
+Se necesitan Windows con PowerShell, Java 17, Node.js/npm, Docker Desktop y el contenedor local `consultaec-redis`. Maven Wrapper y npm pueden descargar dependencias en el primer uso. El secreto HMAC estable de ANT se encuentra cifrado con DPAPI para el usuario de Windows en `%APPDATA%\ConsultaEC\ant-hmac.dpapi`; debe tener al menos 24 caracteres. No se versiona ni se imprime.
+
+Desde la raíz del repositorio, iniciar y comprobar Redis:
 
 ```powershell
 docker start consultaec-redis
 docker exec consultaec-redis redis-cli ping
 ```
 
-La respuesta esperada del segundo comando es `PONG`. `servicio-ant/.env.example` enumera la configuración local; Java no carga ese archivo automáticamente. Sin variables, ANT arranca en modo `REAL` y con Redis deshabilitado para permitir las pruebas unitarias. Para esta demostración deben definirse todas las variables de la terminal 2. TLS sigue disponible con `REDIS_SSL_ENABLED=true` para otros entornos, pero el Docker local usa `false`.
+El segundo comando debe devolver `PONG`. Docker local usa `127.0.0.1:6379`, usuario `default`, contraseña vacía y TLS desactivado; `REDIS_SSL_ENABLED=true` sigue disponible para otros entornos. `servicio-ant/.env.example` enumera las variables, pero Java no lo carga automáticamente.
 
-## Arranque manual: cuatro terminales
+Abrir **cuatro terminales**:
 
-**Terminal 1, SRI:**
+**1. Servicio SRI, puerto 8081**
 
 ```powershell
 cd C:\AME\JAVA\consulta-ec
 .\mvnw.cmd -f servicio-sri\pom.xml spring-boot:run
 ```
 
-**Terminal 2, ANT:** conservar esta misma terminal y el mismo secreto al reiniciar ANT.
+**2. Servicio ANT, puerto 8082**
 
 ```powershell
 cd C:\AME\JAVA\consulta-ec
@@ -75,14 +148,16 @@ $env:ANT_SIMULACION_FALLA = 'false'
 .\mvnw.cmd -f servicio-ant\pom.xml spring-boot:run
 ```
 
-**Terminal 3, orquestador:**
+Para probar el fallback, detener **solo ANT** con Ctrl+C, fijar `$env:ANT_SIMULACION_FALLA = 'true'` en la misma terminal y repetir el comando de ANT. Mantener Redis y el secreto sin cambios. Al terminar, restaurar `false`.
+
+**3. Orquestador, puerto 8080**
 
 ```powershell
 cd C:\AME\JAVA\consulta-ec
 .\mvnw.cmd -f orquestador\pom.xml spring-boot:run
 ```
 
-**Terminal 4, React:**
+**4. React, puerto 5173**
 
 ```powershell
 cd C:\AME\JAVA\consulta-ec\frontend
@@ -90,9 +165,9 @@ npm.cmd ci
 npm.cmd run dev
 ```
 
-Abra `http://127.0.0.1:5173`. Los indicadores de salud reflejan procesos locales, no la disponibilidad de los portales externos. Para probar el fallback, detenga **solo ANT** con Ctrl+C, cambie `$env:ANT_SIMULACION_FALLA = 'true'` en su terminal y repita el comando ANT. Mantenga Redis y las otras aplicaciones activas.
+Abrir `http://127.0.0.1:5173`. Comprobar los endpoints `/actuator/health` de los puertos **8080, 8081 y 8082**. El estado de esos procesos locales no confirma la disponibilidad de los portales externos.
 
-## Pruebas y entrega
+## Pruebas y resultados observados
 
 Desde la raíz:
 
@@ -106,22 +181,37 @@ Desde la raíz:
 .\scripts\probar-recuperacion-redis.ps1 -Escenario Actual
 ```
 
-Después del reinicio de ANT con fallo:
+En `frontend/`:
 
 ```powershell
-.\probar-fase4.cmd -ModoSimulado -EsperarCache
-.\scripts\probar-recuperacion-redis.ps1 -Escenario Fallo
+npm.cmd run test
+npm.cmd run build
 ```
 
-Para probar respuesta inválida, reinicie solo ANT con `ANT_SIMULACION_FALLA=false` y `ANT_SIMULACION_PUNTOS=-1`, y ejecute `-Escenario Invalido`. Restablezca después `ANT_SIMULACION_PUNTOS=20`. La prueba Java de vencimiento usa TTL de 2 segundos exclusivamente en un registro sintético aislado: `$env:CONSULTAEC_REDIS_INTEGRATION='true'; .\mvnw.cmd -B -pl servicio-ant test`. Quite la variable al terminar.
+Para el TTL aislado, con Redis local activo:
 
-En `frontend/`: `npm.cmd run test` y `npm.cmd run build`. Los [resultados observados](docs/pruebas/RESULTADOS_FINALES.md) distinguen pruebas locales de integraciones en vivo.
+```powershell
+$env:CONSULTAEC_REDIS_INTEGRATION = 'true'
+.\mvnw.cmd -B -pl servicio-ant test
+Remove-Item Env:CONSULTAEC_REDIS_INTEGRATION
+```
 
-Para entregar: ejecutar las pruebas, guardar capturas solicitadas en [evidencias](docs/evidencias/README.md) sin datos personales reales, realizar el [estudio de usabilidad](docs/pruebas/USABILIDAD.md), actualizar IcePanel según el documento pendiente, revisar `git status` y compartir los commits del repositorio correcto. No se publica automáticamente.
+El [registro de pruebas](docs/pruebas/RESULTADOS_FINALES.md) documenta la ejecución del 17 de noviembre de 2026: **45 pruebas Java aprobadas** en la suite general y una integración Redis omitida por condición; **11 pruebas ANT aprobadas** en una ejecución aislada que incluye esa integración (no se suman como pruebas distintas a las anteriores); los scripts de fases 1–5 aprobaron; y la compilación frontend pasó. Tras la mejora UX, **22 pruebas frontend** pasaron. Las respuestas SRI en vivo no se verificaron: se usó un servidor HTTP local simulado. El último intento documentado al portal ANT devolvió **HTTP 401**; el 502 anterior motivó la autorización docente de simular.
 
-## Limitaciones conocidas
+![Conectividad y TTL de Redis local](docs/evidencias/08-redis-pruebas.png)
+*Salida técnica real con datos sintéticos. Captura pendiente.*
 
-- La simulación ANT no proporciona puntos oficiales. La verificación actual del portal se documenta con su estado HTTP real, sin afirmar que todavía devuelva 502.
-- El SRI en vivo puede cambiar respuesta o estar indisponible; las pruebas con servidor local no son evidencia de una respuesta oficial.
-- Redis es una caché temporal, no historial permanente. La disponibilidad del proceso ANT no garantiza la conexión al proveedor.
-- El estudio de usabilidad y las capturas de participantes requieren ejecución humana y siguen pendientes.
+![Resultados de las pruebas automatizadas](docs/evidencias/09-pruebas-automatizadas.png)
+*Resumen real de Maven y frontend. Captura pendiente.*
+
+## Galería y entrega de evidencias
+
+Las once imágenes están organizadas junto a la función que ilustran en este README. Su [guía de captura](docs/evidencias/README.md) especifica el proceso, la acción y los datos que deben ocultarse. Guardar cada archivo auténtico en `docs/evidencias/` con el nombre indicado y confirmarlo en Git para que GitHub lo muestre. Adjuntar las salidas de pruebas y el registro de usabilidad que efectivamente se obtengan, conforme a las indicaciones de la asignatura; no se presupone un formato de entrega no proporcionado.
+
+## Limitaciones y trabajo pendiente
+
+- ANT entrega puntos sintéticos, no registros oficiales. El portal de citaciones no ofrece un contrato de puntos verificado.
+- Las tres rutas SRI están implementadas y probadas con HTTP simulado; faltan verificaciones en vivo con datos propios o autorizados.
+- Redis funciona localmente en Docker y actúa como caché temporal, sin historial permanente ni Redis Cloud implementado.
+- Falta colocar el enlace y la captura del modelo IcePanel **de la autora**, además de actualizar sus vistas C1/C2/C3 si aún reflejan otra infraestructura.
+- El hallazgo cualitativo de correo ya se atendió; la validación humana posterior, sus tiempos y resultados cuantitativos siguen pendientes.

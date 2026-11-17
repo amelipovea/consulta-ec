@@ -63,13 +63,27 @@ El recurso es una página JSP de citaciones, sin contrato verificable de puntos.
 - La primera versión del script de Redis interpretó incorrectamente una respuesta de salud como arreglo de bytes y exigía `Int32` cuando PowerShell entregó `Int64`. Un intento posterior no pudo leer el cuerpo de error HTTP 503 en PowerShell 7. Se corrigieron ambos defectos y se repitieron los tres escenarios hasta obtener código de salida 0.
 - Los cuatro puertos ya estaban ocupados por aplicaciones de ConsultaEC iniciadas antes de la prueba; no se detuvieron SRI, orquestador ni React. Solo ANT se reinició para los escenarios y quedó restaurado al modo operativo.
 - Se revisó el código para comprobar que React solo llama a `/api/v1` del orquestador, que no usa `localStorage`, `sessionStorage` ni cookies propias, y que contiene reglas CSS para 1060, 760 y 430 px. La apariencia y el flujo en tamaños reales de pantalla requieren las capturas manuales de entrega.
-- El estudio con participantes de `USABILIDAD.md` sigue pendiente. No hay participantes, tiempos ni resultados inventados.
+- Se recibió un comentario cualitativo real de una persona que probó la interfaz: el correo obligatorio no era suficientemente obvio. El retest posterior, las duraciones y las tasas de finalización siguen pendientes; no se atribuyeron otros hallazgos a esa persona.
 - El visor IcePanel en línea no fue editado; las modificaciones requeridas de C1/C2/C3 están en `docs/arquitectura/ACTUALIZACION_ICEPANEL.md`.
 - No hay remoto Git configurado; los commits quedaron locales y no se hizo `push`.
 
 ## Evidencias para entrega
 
 La lista de capturas que deben obtener los estudiantes está en [docs/evidencias/README.md](../evidencias/README.md). No se añadieron capturas de participantes ni del portal histórico. Las salidas de prueba citadas arriba fueron observadas en terminal; quien entregue el proyecto debe capturarlas de forma auténtica y sin secretos visibles.
+
+## Verificación posterior a la mejora de experiencia — 17 de noviembre de 2026
+
+La sección de correo compartido se destacó antes de los formularios. Se incorporaron validación prioritaria, foco al campo erróneo, anuncio ARIA, autocompletado de correo, defensa en el cliente HTTP y bloqueo inmediato de envíos repetidos. La interfaz también identifica la simulación ANT antes de enviar. Estos cambios no alteraron las rutas públicas ni los servicios Java.
+
+| Comando o revisión | Resultado observado |
+|---|---|
+| En `frontend/`: `npm.cmd run test` | **22 pruebas aprobadas**, 0 fallos. Incluyen correo ausente, inválido y válido, reutilización en tres rutas, prevención de peticiones inválidas, recuperación, bloqueo durante carga, marcado accesible y avisos ANT. |
+| En `frontend/`: `npm.cmd run build` | TypeScript y Vite terminaron sin errores. |
+| `.\mvnw.cmd -B clean test` | `BUILD SUCCESS` a las 14:31:35; 22 pruebas del orquestador, 13 del SRI y 10 de ANT aprobadas, con la prueba aislada Redis omitida por condición explícita. No se repitió la integración Redis de TTL porque no cambió ese código; su ejecución anterior aprobada se conserva arriba. |
+| `.\probar-fase2.cmd` y `.\probar-fase5.cmd` | Ambos terminaron con código 0. La fase 2 observó cuatro HTTP 400 estructurados; la fase 5 observó React, orquestador, SRI y ANT accesibles. |
+| Renderizado local con Edge sin interfaz | Se revisó una captura temporal de escritorio y otra con ancho CSS cercano a móvil; la sección del correo se veía completa y legible. Las capturas quedaron en `frontend/dist/`, ignorado por Git, y no sustituyen las evidencias que deben obtener los estudiantes. No se ejecutó una interacción automatizada de formulario en navegador. |
+
+El comentario de usabilidad recibido es cualitativo. **No se ha medido todavía** si la nueva interfaz reduce errores o tiempos; el protocolo de retest está en [USABILIDAD.md](USABILIDAD.md).
 
 ## Commits locales de implementación y pruebas
 
@@ -79,5 +93,7 @@ La lista de capturas que deben obtener los estudiantes está en [docs/evidencias
 | `4e7d988` | `pruebas: verificar recuperación ANT y caducidad en Redis local` |
 | `1533452` | `funcionalidad: integrar formularios y resultados en React` |
 | `36964cf` | `pruebas: validar contratos SRI, orquestador y frontend` |
+| `b5b3489` | `mejora: destacar el correo obligatorio y guiar las consultas` |
+| `f191a50` | `pruebas: verificar correo, envíos y avisos de la interfaz` |
 
 El commit de documentación que incorpora este archivo se identifica con `git log -1 --oneline` después de terminar el cierre.

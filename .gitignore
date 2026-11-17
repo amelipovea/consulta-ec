@@ -1,0 +1,34 @@
+# Java / Maven
+**/target/
+*.class
+*.log
+.mvn/wrapper/maven-wrapper.jar
+
+# Node / Vite
+**/node_modules/
+**/dist/
+**/coverage/
+*.tsbuildinfo
+
+# Entorno / secretos
+.env
+.env.*
+!**/.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+**/application-local.yml
+**/application-local.yaml
+
+# Editor / sistema operativo
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# Artefactos y descargas
+*.zip

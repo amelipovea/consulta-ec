@@ -29,7 +29,7 @@ function ProbarError400([string]$nombre, [string]$ruta, [string]$cuerpo) {
     } catch {
         $response = $_.Exception.Response
         if ($null -ne $response -and [int]$response.StatusCode -eq 400) {
-            Write-Host ("[OK] {0}: HTTP 400" -f $nombre) -ForegroundColor Green
+            Write-Host ("[OK] {0}: HTTP {1}" -f $nombre, [int]$response.StatusCode) -ForegroundColor Green
         } else {
             Write-Host ("[ERROR] {0}: respuesta distinta de 400" -f $nombre) -ForegroundColor Red
             $script:fallos++
@@ -46,11 +46,13 @@ if ($ModoSimulado) {
     # Solo se debe activar cuando ANT_MODO=SIMULADO; jamás usar RUC/cédulas reales.
     $peticion = '{"correo":"prueba@example.com","cedula":"9999999999"}'
     try {
-        $resultado = Invoke-RestMethod -Method Post -Uri "$Orquestador/api/v1/licencias/puntos/consultas" -ContentType 'application/json' -Body $peticion -TimeoutSec 8
+        $http = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$Orquestador/api/v1/licencias/puntos/consultas" -ContentType 'application/json' -Body $peticion -TimeoutSec 8
+        $resultado = $http.Content | ConvertFrom-Json
         $desdeCache = [bool]$resultado.metadatos.desdeCache
         $esperado = [bool]$EsperarCache
-        if ($desdeCache -eq $esperado -and $resultado.fuente -like 'SIMULACION_ANT*' -and $resultado.datos.puntos -ge 0) {
-            Write-Host ("[OK] Respuesta sintética: fuente={0}, desdeCache={1}, consultadoEn={2}" -f $resultado.fuente, $desdeCache, $resultado.metadatos.consultadoEn) -ForegroundColor Green
+        $fuenteEsperada = if ($EsperarCache) { 'SIMULACION_ANT_CACHE' } else { 'SIMULACION_ANT' }
+        if ($http.StatusCode -eq 200 -and $desdeCache -eq $esperado -and $resultado.fuente -ceq $fuenteEsperada -and $resultado.datos.puntos -ge 0) {
+            Write-Host ("[OK] HTTP {0}: fuente={1}, desdeCache={2}, puntos={3}, consultadoEn={4}" -f $http.StatusCode, $resultado.fuente, $desdeCache, $resultado.datos.puntos, $resultado.metadatos.consultadoEn) -ForegroundColor Green
         } else {
             Write-Host ("[ERROR] Resultado inesperado: fuente={0}, desdeCache={1}" -f $resultado.fuente, $desdeCache) -ForegroundColor Red
             $fallos++
@@ -67,7 +69,5 @@ if ($fallos -gt 0) {
     exit 1
 }
 Write-Host '[OK] FASE 4: comprobaciones seleccionadas aprobadas' -ForegroundColor Green
-if (-not $ModoSimulado) {
-    Write-Host '[NOTA] Para demostrar Redis Cloud real, configura REDIS_ENABLED=true y usa -ModoSimulado.'
-}
+if (-not $ModoSimulado) { Write-Host '[NOTA] La caché Redis local se comprueba con scripts/probar-recuperacion-redis.ps1.' }
 exit 0

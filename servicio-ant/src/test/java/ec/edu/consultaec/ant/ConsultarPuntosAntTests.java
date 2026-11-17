@@ -69,4 +69,14 @@ class ConsultarPuntosAntTests {
         assertThrows(ExcepcionAnt.class, () -> servicio.consultar(cedula));
         verify(cache, never()).guardar(any(), any());
     }
+    @Test void datoInvalidoConservaElUltimoDatoValido() {
+        when(proveedor.consultar(cedula)).thenReturn(new UltimoDatoAnt(
+                json.createObjectNode().put("puntos", -1), Instant.now(), "SIMULACION_ANT"));
+        when(cache.recuperar(cedula)).thenReturn(Optional.of(dato()));
+        RespuestaInternaAnt resultado = servicio.consultar(cedula);
+        assertEquals("SIMULACION_ANT_CACHE", resultado.fuente());
+        assertEquals(20, resultado.datos().path("puntos").asInt());
+        assertEquals(dato().consultadoEn(), resultado.metadatos().consultadoEn());
+        verify(cache, never()).guardar(any(), any());
+    }
 }

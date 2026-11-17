@@ -20,7 +20,7 @@ public class EstadoSistemaController {
     public Map<String, Object> consultarEstado() {
         return Map.of(
                 "aplicacion", "ConsultaEC",
-                "fase", "1 - Conectividad local",
+                "fase", "2 - Contratos REST y orquestación",
                 "orquestador", "DISPONIBLE",
                 "servicios", estadoDependenciasService.consultarServicios()
         );

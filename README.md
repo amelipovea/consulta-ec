@@ -11,10 +11,10 @@ Las consultas de existencia de RUC, datos del contribuyente y vehículo por plac
 Las capturas de esta página están **pendientes de ser tomadas por los estudiantes**. Los enlaces de imagen se mostrarán en GitHub cuando se añadan archivos auténticos con estos nombres; no se incluyen imágenes ficticias.
 
 ![Página principal de ConsultaEC en escritorio](docs/evidencias/01-inicio-desktop.png)
-*Vista inicial en escritorio. Captura pendiente.*
+
 
 ![ConsultaEC en una pantalla móvil](docs/evidencias/10-interfaz-movil.png)
-*Correo obligatorio y formularios en móvil. Captura pendiente.*
+
 
 ## Funciones principales
 
@@ -50,12 +50,12 @@ Las cuatro aplicaciones se inician por separado. El `pom.xml` raíz solo facilit
 
 La vista **C1** sitúa a la persona usuaria, ConsultaEC, el SRI y el portal ANT. La **C2** muestra React, orquestador, ambos microservicios y Redis local con sus conexiones. La **C3** de ANT distingue controlador, caso de uso, proveedor simulado o portal y adaptador Redis. La guía de [actualización del modelo](docs/arquitectura/ACTUALIZACION_ICEPANEL.md) describe las correcciones pendientes para representar Redis local y la simulación.
 
-**Enlace al modelo IcePanel de ConsultaEC:** [PENDIENTE: agregar enlace de IcePanel de la autora]
+**Enlace al modelo IcePanel de ConsultaEC:** https://s.icepanel.io/F36EhoPAOn7V1K/GoRP
 
 La captura de la arquitectura propia se guardará en `docs/evidencias/11-arquitectura-c4.png`. El modelo en línea todavía debe revisarse por quien tenga acceso de edición.
 
 ![Arquitectura C4 propia de ConsultaEC en IcePanel](docs/evidencias/11-arquitectura-c4.png)
-*Vistas C1, C2 y C3 actualizadas. Captura pendiente.*
+
 
 ## Consultas y contratos HTTP
 
@@ -72,10 +72,10 @@ Una respuesta correcta contiene `tipoConsulta`, `estado=OK`, `fuente`, `datos` y
 El servicio SRI llama por GET al catastro para comprobar existencia del RUC y recuperar sus detalles; solo después de confirmar persona natural consulta el servicio de matriculación por placa. El correo no se transmite a los servicios internos. La interfaz no guarda identificadores en `localStorage`, `sessionStorage` ni parámetros de URL.
 
 ![Consulta de contribuyente en ConsultaEC](docs/evidencias/04-consulta-contribuyente.png)
-*Resultado o error real, con datos personales ocultos. Captura pendiente.*
+
 
 ![Consulta de vehículo en ConsultaEC](docs/evidencias/05-consulta-vehiculo.png)
-*Paso vehicular después de confirmar persona natural. Captura pendiente.*
+
 
 ## ANT simulado y recuperación ante fallos
 
@@ -84,10 +84,7 @@ En `ANT_MODO=SIMULADO`, una consulta nueva devuelve puntos sintéticos con `fuen
 Si el proveedor falla y existe caché vigente, ANT devuelve `SIMULACION_ANT_CACHE`, `desdeCache=true`, los puntos anteriores y **`consultadoEn` original**. La interfaz advierte que la información puede estar desactualizada. Tras vencer el TTL, la caché deja de responder. Si no hay dato previo, la API entrega un error 503 estructurado, sin presentar cero puntos ficticios. El modo `REAL` consulta una página JSP de citaciones, pero no deduce puntos de ella porque no hay un contrato de puntos verificado.
 
 ![Puntos ANT sintéticos con fuente visible](docs/evidencias/06-ant-simulacion.png)
-*Simulación autorizada; no son puntos oficiales. Captura pendiente.*
 
-![Recuperación de puntos ANT desde caché](docs/evidencias/07-ant-recuperacion-cache.png)
-*Advertencia y fecha original del dato sintético. Captura pendiente.*
 
 ## Evaluación de usabilidad y mejoras de experiencia de usuario
 
@@ -101,10 +98,10 @@ Si el proveedor falla y existe caché vigente, ANT devuelve `SIMULACION_ANT_CACH
 La revisión técnica añadió un bloqueo inmediato de envíos repetidos, estados de carga anunciados, ayudas y errores más legibles y botones móviles de ancho completo. Se conservaron los avisos de simulación y caché con la fecha original. La compilación y 22 pruebas del frontend verifican estos comportamientos; se revisó el renderizado local en escritorio y en un ancho CSS cercano al móvil. **Todavía falta repetir la evaluación con personas** para medir si la mejora reduce errores. El método, la comparación antes/después y el protocolo de retest están en [USABILIDAD.md](docs/pruebas/USABILIDAD.md).
 
 ![Sección del correo obligatorio antes de las consultas](docs/evidencias/02-correo-obligatorio.png)
-*Requisito visible antes del envío. Captura pendiente.*
+
 
 ![Validación en línea de un correo incorrecto](docs/evidencias/03-validacion-correo.png)
-*Mensaje accesible y foco en el campo. Captura pendiente.*
+
 
 ## Instalación y arranque manual
 
@@ -199,10 +196,10 @@ Remove-Item Env:CONSULTAEC_REDIS_INTEGRATION
 El [registro de pruebas](docs/pruebas/RESULTADOS_FINALES.md) documenta la ejecución del 17 de noviembre de 2026: **45 pruebas Java aprobadas** en la suite general y una integración Redis omitida por condición; **11 pruebas ANT aprobadas** en una ejecución aislada que incluye esa integración (no se suman como pruebas distintas a las anteriores); los scripts de fases 1–5 aprobaron; y la compilación frontend pasó. Tras la mejora UX, **22 pruebas frontend** pasaron. Las respuestas SRI en vivo no se verificaron: se usó un servidor HTTP local simulado. El último intento documentado al portal ANT devolvió **HTTP 401**; el 502 anterior motivó la autorización docente de simular.
 
 ![Conectividad y TTL de Redis local](docs/evidencias/08-redis-pruebas.png)
-*Salida técnica real con datos sintéticos. Captura pendiente.*
+
 
 ![Resultados de las pruebas automatizadas](docs/evidencias/09-pruebas-automatizadas.png)
-*Resumen real de Maven y frontend. Captura pendiente.*
+
 
 ## Galería y entrega de evidencias
 
